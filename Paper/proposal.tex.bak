@@ -1,0 +1,107 @@
+\documentclass[letterpaper]{article}
+
+%%  PREAMBLE
+\usepackage{graphicx, graphics}				% show the graph
+\usepackage{amsmath, amsthm, bm}				% math, theorem, bm?
+\usepackage{amsfonts}						% symbol (arrow)
+\usepackage{hyperref}						% url href stuff
+\usepackage{parskip}							% double line = paragraph change
+\usepackage{float}							% edit the graph, table position
+\title{Vocal Language Classification}
+\author{Xinquan Zhou\\902998187}
+
+
+
+
+%% DOCUMENT
+\begin{document}
+
+\maketitle
+
+%% SHORTCUT
+\newcommand{\myInt}{$\int_0^{\infty} (x^2 + x + 1) dx$}
+
+\section*{Extra credits}
+There are totally 24 (3+8+13) questions in CIOS! 
+\section*{Task}
+Automatically detecting the language in the music songs is an interesting topic in the Music Information Retrieval (MIR) and is not widely studied for the moment. Although lots of research has focused on the spoken language identification task and the accuracy of this task can be kind of satisfying in many cases. Vocal sound language identification in music is different and more difficult in some sense than spoken language. It is because most of the speech classification methods are based on phoneme recognition which is extremely hard to be detected in music since  the pitch varies much from the normal speech. Besides pitch, the duration of the phoneme also can be very different between music and speech. My goal of this project is that building a proper classifier to automatically classify which language of the input music song, the input song can be both live humming and recording.  
+
+
+\section*{Motivation}
+Vocal language classification is an interesting topic in MIR and has many user cases. With the development of international cooperation and communication, language identification tends to be increasingly significant for music technology industry. For example, it can serve for query by humming and music recognition. Also it can involve music robotic in terms of interaction. And I believe there are lots of potential usages to be digged out. 
+
+\section*{Related Work}
+In the last tens of years, there has been much research working on this task. First of all, Gaussian Mixture Model (GMM)\cite{zissman1993automatic} for language identification (LID) served as the simplest way of this study in which each language is modeled as a GMM to do the classification. Furthermore, phone recognition followed by language modeling (PRLM)\cite{zissman1996comparison}, which is a single-language phone recognizer followed by an n-gram analyzer, and instead of single language model in PRLM, parallel PRLM exploiting Multilanguage model became effective methods for this task. More recently, Campell and etc\cite{campbell2006support} exploit the ability of SVMs in which they use a kernel that compares sequences of feature vectors and produces a measure of similarity for language recognition. SantoshKumar and Ramasubramanian\cite{santoshkumar2005automatic} establish the equivalence of an ergodic-Hidden Markov Model (EHMM) to a parallel sub-word recognition framework for spoken language identification which gives me much inspiration on my research. Compared with spoken language identification, vocal sound language classification in music has not widely studied yet. Wei-Ho Tsai and Hsin-Min Wang\cite{tsai2004towards} present a first attempt to automatically identify the language sung in a music recording. And Jochen Schwenninger and etc\cite{schwenninger2006language} make efforts of transferring well-established techniques from spoken language identification to the area of language identification in music. 
+
+\section*{Dataset and Features}
+There seems not be the public standard dataset for this task, so that I use my personal collection of popular songs of English and Chinese as part of the dataset for the research. There are 90 different English singers and 50 different Chinese singers in my collection. And I select 2 to 3 songs on average of each singers building the dataset. The number of English songs is 180, while the number of Chinese is 124, each song last 4 minutes on average. And I also collect 110 English vocal songs from QUASI Database and MTG-QBH dataset, and 150 Chinese vocal songs from MIR-1K Dataset. So totally I have 290 English songs and 274 Chinese songs. According to the feature study in spoken language identification by Rong Tong\cite{tong2006integrating} and Weiqiang Zhang\cite{zhang2008auditory}, mel-frequency cepstral coefficients (MFCC) and Shifted Delta Coefficients (SDC) are very suitable for this particular task. So I extract 13 dimensions MFCC and 49 dimensions SDC building 62 dimensions feature vector. 
+
+\section*{Methodology}
+\textbf{Preprocessing}\\
+In the music, background music has much bad effects on the accuracy of language classification, therefore what I want is just the pure vocal part in the songs. In order to get the singing voice, I use source separation method of Po-Sen Huang and etc\cite{huang2012singing} to process the pop music in my collection. Then, noticing that there are much silent part in some samples, I decide to do the voice detection based on \cite{sohn1999statistical} for each  sample and cut off the silent part. And I calculate 13 MFCC and 49 SDC for each frame of each sample. And frame length is 50ms and hopsize is 25ms. So each sample is represented as a m $\times$ n matrix, where m is the dimension of features which is 62, n is the number of frames in the sample. Because the value range of SDC and MFCC differs a lot, I do the normalization using Z score for all the samples. Lots of classifiers can not use this kind of time series directly, so for these classifiers, I combine 40 adjacent frames using a slide window and calculate the mean to create new sub-samples and input these sub-samples into classifiers. 
+
+\textbf{Classifiers in Weka\cite{hall2009weka}}\\
+\textit{SVM(SMO)}: Using c = 1.0, RBFkernel\\
+\textit{NaiveBayes}: With useKernelEstimator to be false\\
+\textit{Random Forest}: With the 50 trees\\
+\textit{AdaBoostM1}: With 50 iterations\\
+\textit{1-NN}\\
+
+\textbf{EHMM}\\
+\texttt{EHMM System}:\\
+One of the earliest work in LID by House and Neuberg\cite{house1977toward} was based on the now popular hidden Markov model (HMM). Following this, there have been a few other attempts to use HMMs for LID.
+According to \cite{schwenninger2006language} who established the equivalence of the ‘parallel sub word recognition’ framework to an EHMM. EHMM is the fully connected HMM as shown as figure 1. The states of EHMM correspond to sub-work units and the state-transition probabilities represent the bigram statistics of language model. And the state observation densities are represented by GMM. I use basically the same model as above. I train one EHMM $L_{1}$to $L_{N}$ for every target language. And given an input audio, I calculate the likelihood of each EHMM for the input using Viterbi decoding, and output the language which has the highest likelihood $V_{i}$, i.e. $\tilde{i} = arg max_{i = 1,...,N}(V_{i})$. The system float chart is shown as figure 2.  
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.7]{ergodicHMM.jpeg}
+	\caption{Ergodic HMM}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=1.4]{floatchart}
+	\caption{System Float Chart}
+\end{figure}
+
+\texttt{Parameter Specification}:\\
+An M-state EHMM of language is specified as $L_{i} = (A_{i},B_{i},\pi_{i})$,where $A_{i}$ is the state transition probability, $B_{i}$ is state observation probability and $\pi_{i}$ is the initial state probability. We have to initialize the state transition probability, initial state probability, and state observation probability before using the EHMM. Usually $A_{i}$ and $\pi_{i}$ can be randomly selected or uniformly set. I uniformly set these values. As for $B_{i}$ I use standard K-means to initialize it: Firstly I cluster each language feature vectors into several groups that are corresponding the initial states. And then I calculate the mean and covariance matrix of each group. Therefore I assign these mean and covariance matrix to the initial parameters of $B_{i}$. To avoid the covriance of GMM to be ill-conditioned, I assume the features are dependent to each other so that using diagonal coariance matrix.
+
+\textbf{Evaluation}\\
+I use 5-fold cross validation to access the classifiers. For better evaluation, I compare the confusion matrix and calculate accuracy of the results.
+
+\section{Experiment and Results}
+I present here experimental results using SVM (SMO), Naive Bayes, Random Forest, AdaBoostM1 and 1-NN. As talked above, the total number of samples is 169452. This is the experiment 1. And then I  use the features extracted from original songs without singing voice separation forming 158031 samples to do the experiment again, and this is the experiment 2. The results are shown in table 1.
+\begin{table}[H]
+\centering
+\caption{The accuracy of different classifiers}
+\label{tab:songs}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+Classifier & SVM(SMO) & Naive Bayes& AdaBoostM1 & Random Forest & 1-NN & EHMM\\
+\hline
+Accuracy for Ex.1 & 0.6184 & 0.5801 & 0.6278 & 0.6347 & 0.6544 & 0.9274\\
+\hline
+Accuracy for Ex.2 & 0.6649 & 0.6098 & 0.6507 & 0.7357 & 0.6571 & 0.8052\\
+\hline
+
+\end{tabular}
+\end{table}
+
+ 
+\section{Analysis and Conclusion}
+The result of EHMM is much better than the others. It can be explained that on the one hand, audio signal is a time series stream, so EHMM can capture the properties much better and accurate. On the other hand, maybe maybe only taking the mean is not good way to represent the samples. It can lose lots of information. And the window size(bonding adjacent frames together to extract features) is too small. Looking into the features, I find almost every pair of features are kind of uncorrelated or related in the strange way. For example the figure 3, 4, and 5 illustrates the typical relation between some pairs of features, the colors represent classes. Almost all pairs of features have similar relation as shown in these figures. It is really hard to imagine how they distribute in the 62-dimension space. Thus I think it will be extremely hard to find a hyper-plane to separate them well. So in a another way of thinking: maybe the values of feature may not matter a lot but the dynamic changing does. And HMM can represent this changing with the transition probability. Furthermore, the states in HMM have kind of physical meanings of the language: the sub-work unit. Therefore using HMM is more intuitive for this task as well. And in the real language, the combination of the words can be really large, so using EHMM with fully connected states can precisely indicate this characteristic of language. Additionally, we find that after using source separation songs as training performs worse than using the original songs except for EHMM classifier. It may be because the source separation algorithm is not good enough to extract pure vocal sound, therefore introducing many similar artifacts so that making the class even more vague and hard to distinguish. 
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.3]{feature_2_3.png}
+	\caption{Plot for feature 2 and 3}
+	\includegraphics[scale=0.3]{feature_2_4.png}
+	\caption{Plot for feature 2 and 4}
+	\includegraphics[scale=0.3]{feature_3_4.png}
+	\caption{Plot for feature 3 and 4}
+\end{figure}
+
+\bibliographystyle{ieeetr}
+\bibliography{reference}
+
+\end{document}
